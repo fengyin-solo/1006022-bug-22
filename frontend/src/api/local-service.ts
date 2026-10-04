@@ -1,5 +1,11 @@
 import { MODULE_BY_KEY } from '@/data/modules'
 import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
+import {
+  confirmArrival,
+  dispatchShuttle,
+  hydrateMileage,
+  requestShuttleMaintenance,
+} from '@/api/shuttle-service'
 import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
 
 // 会写进数据的「往回走」动作：命中就把这条记录标成异常态，看板上能一眼看出来。
@@ -24,11 +30,22 @@ export function filterRows(rows: EntryRow[], filters: Record<string, string>): E
 }
 
 export function listEntries(key: string, filters: Record<string, string> = {}): PageResult {
-  const matched = filterRows(listRows(key), filters)
+  const matched = filterRows(hydrateMileage(key, listRows(key)), filters)
   return { items: matched, total: matched.length, page: 1, size: matched.length }
 }
 
 export function runAction(key: string, id: number, action: string): ActionResult {
+  if (key === 'shuttle') {
+    const shuttleAction: Record<string, (id: number) => ActionResult> = {
+      派发任务: dispatchShuttle,
+      确认到站: confirmArrival,
+      申请维保: requestShuttleMaintenance,
+    }
+    const handler = shuttleAction[action]
+    if (handler) {
+      return handler(id)
+    }
+  }
   const meta = moduleMeta(key)
   const target = meta.actionTargets[action]
   if (!target) {
@@ -65,7 +82,7 @@ export function exportEntries(key: string): { filename: string; content: string 
   const meta = moduleMeta(key)
   const header = ['编号', ...meta.fields, '当前状态']
   const lines = [header.join(',')]
-  for (const row of listRows(key)) {
+  for (const row of hydrateMileage(key, listRows(key))) {
     lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
   }
   return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }
@@ -83,6 +100,14 @@ export function downloadEntries(key: string): void {
   document.body.removeChild(anchor)
   URL.revokeObjectURL(url)
 }
+
+// 摆渡车到站：后台批量入口、到站明细与合计、按车辆编号打包下载，统一从这里出去。
+export {
+  arrivalMileageTotal,
+  batchConfirmArrivals,
+  downloadArrivalDetails,
+  listArrivals,
+} from '@/api/shuttle-service'
 
 export function loadOverview(): OverviewResult {
   const rows = allRows()

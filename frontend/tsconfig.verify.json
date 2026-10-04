@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "outDir": "/tmp/shuttle-verify-out",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src/api/**/*.ts", "src/data/**/*.ts", "verify/**/*.ts"]
+}

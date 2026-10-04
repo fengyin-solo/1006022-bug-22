@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>特种车辆维保管理</h2>
-        <p class="page-desc">维护维保记录，围绕维保单号、车辆编号、维保类型、进厂日期做登记、筛选与状态流转。</p>
+        <p class="page-desc">维护维保记录，围绕维保单号、车辆编号、维保类型、进厂日期做登记、筛选与状态流转。里程读数取自车辆里程台账，与摆渡车调度是同一份。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记维保记录</button>
@@ -82,7 +82,7 @@ import {
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('vehmaint')
-const columns = ["维保单号", "车辆编号", "维保类型", "进厂日期", "出厂日期", "维修项目", "承修单位", "维保状态"]
+const columns = ["维保单号", "车辆编号", "维保类型", "进厂日期", "出厂日期", "维修项目", "承修单位", "维保状态", "里程读数"]
 const actions = ["送厂维保", "提交验收", "确认出厂"]
 const statuses = ["待进厂", "维保中", "待验收", "已出厂"]
 const stats = [{"label": "待进厂车辆", "value": 0}, {"label": "维保中车辆", "value": 0}, {"label": "待验收车辆", "value": 0}]
