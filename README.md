@@ -15,7 +15,9 @@
 │   ├── src/views/            每个业务模块一个页面
 │   ├── src/api/local-service.ts   本地数据服务：列表、筛选、动作流转、导出
 │   ├── src/data/             模块元数据 / 示例数据 / localStorage 持久化
+│   │                         shuttle-domain.ts 为摆渡车到站收尾的唯一领域逻辑
 │   ├── src/stores/           会话与筛选状态
+│   ├── test/                 到站收尾、幂等、越级挡回、台账回写与导出的测试
 │   └── vite.config.ts        dev server 配置（open: false，无 /api 代理）
 ├── .gitignore
 └── docker-compose.yml
@@ -68,4 +70,44 @@ npm run build
 - 字段、状态、动作与流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
-- 想回到初始数据：清掉浏览器里 `airport-ground-ops:entries` 这一项，或调用 `resetModule(模块)`。
+- 想回到初始数据：清掉浏览器里 `airport-ground-ops:entries` 与
+  `airport-ground-ops:shuttle-arrivals` 两项，或调用 `resetModule(模块)`。
+  数据结构带版本号（`airport-ground-ops:schema-version`），版本不符会自动重新播种。
+
+### 摆渡车到站收尾（两个入口，一份逻辑）
+
+司机在车上点「确认到站」与调度在后台批量勾选到站，都只调用
+`frontend/src/data/shuttle-domain.ts` 里的同一段纯函数收尾，接口层
+（`local-service.ts` 的 `confirmShuttleArrival` / `batchConfirmShuttleArrivals`）负责事务落盘：
+
+1. **状态守卫**：车辆只能从「执行中」回到「待命」；维保中、充电中的车辆不能确认到站，
+   也不能被派新任务，越级操作一律挡回。
+2. **幂等**：以 `车辆编号 + 当前任务 + 发车时间` 构成 `tripId`，同一趟任务无论从哪个入口、
+   提交多少次，里程只累计一次，状态不会重复变更。
+3. **原子性**：状态回待命、里程读数累加、到站明细落账、维保台账回写在同一个
+   `local-store.commit` 事务里完成，不会再出现「状态改了里程没改」或「里程加了状态没动」。
+4. **到站明细导出**：页面合计与 CSV 导出共用 `listArrivalGroups`，按车辆编号分组打包成
+   一份文件，导出的里程合计与页面看到的合计必然一致。
+
+### 里程口径：以摆渡车里程读数为准
+
+摆渡车「里程读数」与特种车辆维保「台账里程」不一致时，**以摆渡车里程读数为准**：
+
+- 里程读数由车辆每一趟行驶连续累计，实时更新，且能与到站明细逐趟对账；
+- 维保台账只在进厂/出厂等离散时点手工抄录，天然存在滞后与抄写误差
+  （种子数据里 VEHM-0001 抄录于保养出厂时，比里程表少 38.4 km）。
+
+每次到站收尾都会把最新里程读数回写该车辆的维保台账；维保页面读出时再按摆渡车读数对齐，
+保证维保那边看到的里程与摆渡车是同一份。
+
+## 测试
+
+```bash
+cd frontend
+npm test
+```
+
+领域层（`shuttle-domain.ts` 纯函数）与接口+持久化层（`local-service.ts` +
+`local-store.ts`）都有用例：覆盖两个入口共用收尾、重复提交幂等、越级派单/到站挡回、
+台账回写与导出合计一致性。测试运行器为 `frontend/test/run.mjs`，用仓库已装的 esbuild
+把 TS 测试打包后交给 Node 执行，不引入额外测试框架。

@@ -24,6 +24,11 @@
       </span>
     </p>
 
+    <p class="mileage-note">
+      里程口径：台账里程以摆渡车调度的里程表读数为唯一权威来源——里程表按每趟行驶连续累计、可与到站明细逐趟对账，
+      维保台账只是进厂/出厂的离散抄录；两者不一致时以里程读数为准，每次到站自动回写本台账。
+    </p>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -82,7 +87,7 @@ import {
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('vehmaint')
-const columns = ["维保单号", "车辆编号", "维保类型", "进厂日期", "出厂日期", "维修项目", "承修单位", "维保状态"]
+const columns = ["维保单号", "车辆编号", "维保类型", "进厂日期", "出厂日期", "维修项目", "承修单位", "台账里程", "维保状态"]
 const actions = ["送厂维保", "提交验收", "确认出厂"]
 const statuses = ["待进厂", "维保中", "待验收", "已出厂"]
 const stats = [{"label": "待进厂车辆", "value": 0}, {"label": "维保中车辆", "value": 0}, {"label": "待验收车辆", "value": 0}]
@@ -135,3 +140,15 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.mileage-note {
+  font-size: 12px;
+  color: #175cd3;
+  background: #eff8ff;
+  border: 1px solid #b2ddff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 0 0 10px;
+}
+</style>
